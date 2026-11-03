@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="bg"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0F4C45">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>КетоДнес</title>
+<style>
+:root{--bg:#EDF2F0;--ink:#12302A;--mut:#5F7872;--card:#fff;--line:#D9E4E0;--pri:#0F4C45;--on:#fff;--c:#E8466B;--p:#2F7DD1;--f:#E9A820;--ok:#1E9E6A}
+@media(prefers-color-scheme:dark){:root{--bg:#0D1B18;--ink:#E6F0ED;--mut:#8FA8A1;--card:#15282A;--line:#264240;--pri:#3CC4A8;--on:#06211C}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+main{max-width:520px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 14px 0}
+h1{font-size:23px;margin:0 0 4px}h2{font-size:15px;margin:0 0 10px;color:var(--mut);font-weight:600}
+.card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:12px;border:1px solid var(--line)}
+.mut{color:var(--mut);font-size:13px}.row{display:flex;gap:10px;align-items:center}.sp{justify-content:space-between}
+.btn{background:var(--pri);color:var(--on);border:0;border-radius:14px;padding:13px 16px;font:inherit;font-weight:700;width:100%;margin-top:8px}
+.btn.sec{background:transparent;color:var(--pri);border:1.5px solid var(--pri)}.btn.red{background:var(--c);color:#fff}
+input,select{font:inherit;width:100%;padding:11px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:var(--ink)}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bar{height:9px;border-radius:5px;background:var(--line);overflow:hidden;margin:4px 0 10px}.bar i{display:block;height:100%;border-radius:5px;transition:width .5s}
+.chip{padding:8px 14px;border-radius:20px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:14px}
+.chip.on{background:var(--pri);color:var(--on);border-color:var(--pri)}
+.item{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);gap:8px}
+.item:last-child{border:0}.x{background:none;border:0;color:var(--mut);font-size:18px;padding:4px 8px}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom);z-index:10}
+nav button{background:none;border:0;padding:9px 0 8px;color:var(--mut);font:inherit;font-size:12px}
+nav button b{display:block;font-size:20px;font-weight:400}nav button.on{color:var(--pri);font-weight:700}
+#sheet{position:fixed;inset:0;background:#0007;display:none;align-items:flex-end;z-index:20}#sheet.on{display:flex}
+#sheet>div{background:var(--card);width:100%;max-width:520px;margin:0 auto;border-radius:22px 22px 0 0;padding:18px;padding-bottom:calc(18px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
+#toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--pri);color:var(--on);padding:10px 18px;border-radius:20px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:30}
+#toast.on{opacity:1}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--ok);margin-right:6px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<main id="app"></main>
+<nav id="nav"></nav>
+<div id="sheet" onclick="if(event.target===this)closeS()"><div id="sb"></div></div>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s),K='ketodnes.v1',r1=x=>Math.round(x*10)/10;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const def={p:{sex:'f',age:27,h:165,w:70,gw:65,act:1.375,def:.2,mode:'keto'},log:{},custom:[],weights:[],fast:null,fasts:[],setup:0};
+let S;try{S=Object.assign({},def,JSON.parse(localStorage.getItem(K)||'{}'));S.p=Object.assign({},def.p,S.p)}catch(e){S=JSON.parse(JSON.stringify(def))}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const dk=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+// [име, ккал, белтъчини, мазнини, нетни въглехидрати (на 100 г), тегло на 1 бр.]
+const FOODS=[["Яйце",143,12.6,9.5,.7,55],["Пилешки гърди",165,31,3.6,0],["Свинско бонфиле",143,26,3.5,0],["Телешка кайма",250,26,15,0],["Сьомга",208,20,13,0],["Риба тон (консерва)",116,26,1,0],["Бекон",541,37,42,1.4],["Шунка",145,21,6,1],["Авокадо",160,2,15,1.8,150],["Бяло сирене",264,14,21,1.5],["Кашкавал",350,25,28,1.3],["Крема сирене",342,6,34,4],["Гръцко кисело мляко",133,5,10,4],["Кисело мляко 3.6%",61,3.5,3.6,4.7],["Сметана за готвене",195,2.8,20,3],["Краве масло",717,.9,81,.1],["Зехтин",884,0,100,0],["Бадеми",579,21,50,9],["Орехи",654,15,65,7],["Чиа семена",486,17,31,8],["Маслини",115,.8,11,.5],["Тофу",76,8,4.8,1.9],["Спанак",23,2.9,.4,1.4],["Броколи",34,2.8,.4,4],["Карфиол",25,1.9,.3,3],["Тиквички",17,1.2,.3,2.1],["Краставица",15,.7,.1,3,120],["Домат",18,.9,.2,2.7,120],["Зелена салата",15,1.4,.2,1.3],["Чушка",31,1,.3,4.2,120],["Гъби",22,3.1,.3,2.3],["Ягоди",32,.7,.3,5.7],["Малини",52,1.2,.7,5.5],["Ябълка",52,.3,.2,11.6,180],["Хляб бял",265,9,3.2,49,30],["Ориз варен",130,2.7,.3,28],["Картофи",77,2,.1,16]];
+const MEALS=['Закуска','Обяд','Хапване','Вечеря'];
+let tab=S.setup?'today':'me',vd=dk(),q='',shown=[],sel=null;
+const all=()=>[...S.custom.map(x=>({...x})),...FOODS.map(a=>({n:a[0],k:a[1],p:a[2],f:a[3],c:a[4],u:a[5]}))];
+function goals(){const p=S.p,bmr=10*p.w+6.25*p.h-5*p.age+(p.sex==='m'?5:-161),tdee=bmr*p.act,fl=p.sex==='m'?1500:1200,k=Math.round(Math.max(fl,tdee*(1-p.def))/10)*10,m=p.mode==='keto'?[5,25,70]:[15,30,55];return{bmr,tdee,k,c:Math.round(k*m[0]/400),p:Math.round(k*m[1]/400),f:Math.round(k*m[2]/900),wk:Math.max(0,(tdee-k)*7/7700)}}
+const sum=L=>L.reduce((a,x)=>({k:a.k+x.k,p:a.p+x.p,f:a.f+x.f,c:a.c+x.c}),{k:0,p:0,f:0,c:0});
+const ring=(p,col,big,sm,fs=24)=>{const C=2*Math.PI*52,o=C*(1-Math.min(1,Math.max(0,p)));return`<svg viewBox="0 0 120 120" width="136" height="136"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="10"/><circle cx="60" cy="60" r="52" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${o}" transform="rotate(-90 60 60)" style="transition:stroke-dashoffset .6s"/><text x="60" y="61" text-anchor="middle" font-size="${fs}" font-weight="800" fill="currentColor">${big}</text><text x="60" y="80" text-anchor="middle" font-size="10" fill="var(--mut)">${sm}</text></svg>`};
+const mb=(n,v,g,col)=>{const o=v>g;return`<div class="row sp mut"><span>${n}</span><span style="color:${o?'var(--c)':'inherit'}">${r1(v)} / ${g} г</span></div><div class="bar"><i style="width:${Math.min(100,g?v/g*100:0)}%;background:${o?'var(--c)':col}"></i></div>`};
+const fmtD=d=>new Date(d+'T12:00').toLocaleDateString('bg-BG',{weekday:'short',day:'numeric',month:'short'});
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),1800)}
+function openS(h){$('#sb').innerHTML=h;$('#sheet').classList.add('on')}function closeS(){$('#sheet').classList.remove('on')}
+
+function today(){const g=goals(),L=S.log[vd]||[],t=sum(L),left=g.k-t.k,isT=vd===dk();
+let msg=!L.length?'Добави първото си хранене от раздел „Храна“.':t.c>g.c?'Въглехидратите надвишиха лимита – следващото хранене нека е месо, риба или яйца със зеленчуци.':left<0?'Калориите за деня са надвишени – това е ок, утре е нов ден.':'Отиваш добре. Не забравяй водата!';
+const gr=MEALS.map(m=>{const e=L.filter(x=>x.meal===m);return e.length?`<div class="card"><h2>${m} · ${Math.round(sum(e).k)} ккал</h2>${e.map(x=>`<div class="item"><div><b>${esc(x.n)}</b><div class="mut">${x.g} г · В ${r1(x.c)} · Б ${r1(x.p)} · М ${r1(x.f)}</div></div><div class="row"><span>${x.k}</span><button class="x" onclick="del(${x.id})">✕</button></div></div>`).join('')}</div>`:''}).join('');
+return`<div class="row sp"><button class="chip" onclick="mv(-1)">‹</button><b>${isT?'Днес':fmtD(vd)}</b><button class="chip" onclick="mv(1)" ${isT?'disabled style="opacity:.3"':''}>›</button></div>
+<div class="card" style="margin-top:12px"><div class="row">${ring(t.k/g.k,left<0?'var(--c)':'var(--pri)',Math.abs(Math.round(left)),left<0?'ккал над целта':'ккал остават')}<div style="flex:1">${mb('Нетни въглехидрати',t.c,g.c,'var(--c)')}${mb('Белтъчини',t.p,g.p,'var(--p)')}${mb('Мазнини',t.f,g.f,'var(--f)')}</div></div><p class="mut" style="margin:8px 0 0">${msg}</p></div>${gr}
+<button class="btn" onclick="go('food')">＋ Добави храна</button>`}
+const mv=n=>{const d=new Date(vd+'T12:00');d.setDate(d.getDate()+n);if(dk(d)>dk())return;vd=dk(d);render()};
+const del=id=>{S.log[vd]=(S.log[vd]||[]).filter(x=>x.id!==id);save();render()};
+
+function fl(){shown=all().filter(x=>x.n.toLowerCase().includes(q.toLowerCase()));return shown.map((x,i)=>`<div class="item" onclick="openF(${i})"><div><b>${x.c<=5?'<span class="dot"></span>':''}${esc(x.n)}</b><div class="mut">${x.k} ккал · В ${x.c} · Б ${x.p} · М ${x.f}</div></div><b style="font-size:22px;color:var(--pri)">＋</b></div>`).join('')||'<p class="mut">Няма резултат – добави я като нова храна.</p>'}
+function foodV(){return`<h1>Какво яде?</h1><p class="mut">Стойности на 100 г. В = нетни въглехидрати, Б = белтъчини, М = мазнини. <span class="dot"></span>= подходящо за кето.</p><input id="q" placeholder="Търси храна…" value="${esc(q)}" oninput="q=this.value;$('#fl').innerHTML=fl()"><div class="card" style="margin-top:12px" id="fl">${fl()}</div><button class="btn sec" onclick="newF()">Нова храна</button>`}
+function openF(i){sel=shown[i];const h=new Date().getHours(),m=h<11?'Закуска':h<15?'Обяд':h<18?'Хапване':'Вечеря';
+openS(`<h1>${esc(sel.n)}</h1><label>Количество (грамове)</label><input id="g" type="number" inputmode="decimal" value="${sel.u||100}" oninput="pv()"><div class="row" style="margin:10px 0;flex-wrap:wrap">${[50,100,150,200].map(v=>`<button class="chip" onclick="$('#g').value=${v};pv()">${v} г</button>`).join('')}${sel.u?`<button class="chip" onclick="$('#g').value=${sel.u};pv()">1 бр. (${sel.u} г)</button>`:''}</div><label>Хранене</label><select id="ml">${MEALS.map(x=>`<option ${x===m?'selected':''}>${x}</option>`).join('')}</select><p id="pv" class="mut" style="font-size:15px"></p><button class="btn" onclick="addE()">Добави</button>`);pv()}
+const calc=()=>{const g=parseFloat($('#g').value)||0,m=g/100;return{g,k:Math.round(sel.k*m),p:r1(sel.p*m),f:r1(sel.f*m),c:r1(sel.c*m)}};
+function pv(){const e=calc();$('#pv').innerHTML=`<b>${e.k} ккал</b> · В ${e.c} г · Б ${e.p} г · М ${e.f} г`}
+function addE(){const e=calc();if(e.g<=0)return;(S.log[vd]=S.log[vd]||[]).push({id:Date.now(),n:sel.n,meal:$('#ml').value,...e});save();closeS();toast('Добавено ✓');tab='today';render()}
+function newF(){openS(`<h1>Нова храна</h1><label>Име</label><input id="nn"><div class="g2"><div><label>Ккал /100г</label><input id="nk" type="number" inputmode="decimal"></div><div><label>Белтъчини</label><input id="np" type="number" inputmode="decimal"></div><div><label>Мазнини</label><input id="nf" type="number" inputmode="decimal"></div><div><label>Нетни въглехидрати</label><input id="nc" type="number" inputmode="decimal"></div></div><button class="btn" onclick="saveF()">Запази</button>`)}
+function saveF(){const n=$('#nn').value.trim(),v=i=>parseFloat($(i).value)||0;if(!n)return toast('Въведи име');S.custom.unshift({n,k:v('#nk'),p:v('#np'),f:v('#nf'),c:v('#nc')});save();closeS();render()}
+
+const hms=ms=>{const s=Math.floor(ms/1e3);return[Math.floor(s/3600),Math.floor(s%3600/60),s%60].map(x=>String(x).padStart(2,'0')).join(':')};
+const tm=t=>new Date(t).toLocaleTimeString('bg-BG',{hour:'2-digit',minute:'2-digit'});
+function fastV(){const f=S.fast;let h='<h1>Интервално гладуване</h1>';
+if(f){const e=(Date.now()-f.s)/36e5,pc=e/f.g,ph=e>=f.g?'Целта е постигната! 🎉 Можеш да прекратиш поста.':e<4?'Храната още се усвоява.':e<8?'Нивата на инсулин спадат – тялото започва да ползва запасите.':e<12?'Организмът ползва повече мазнини за енергия.':'Почти си там – издръжливост!';
+h+=`<div class="card" style="text-align:center"><div style="display:flex;justify-content:center">${ring(pc,pc>=1?'var(--ok)':'var(--f)',hms(Date.now()-f.s),'от '+f.g+' ч',19)}</div><p>${ph}</p><p class="mut">Започнат в ${tm(f.s)} · целта е в ${tm(f.s+f.g*36e5)}</p><button class="btn red" onclick="stopF()">Прекрати поста</button></div>`}
+else h+=`<div class="card"><h2>Избери режим</h2><div class="row" style="flex-wrap:wrap">${[14,16,18,20].map(p=>`<button class="chip ${S.fproto===p?'on':''}" onclick="S.fproto=${p};save();render()">${p}:${24-p}</button>`).join('')}</div><p class="mut">${S.fproto} ч гладуване, ${24-S.fproto} ч прозорец за хранене. За начало 14:10 или 16:8 е напълно достатъчно.</p><button class="btn" onclick="S.fast={s:Date.now(),g:S.fproto};save();render()">Започни пост сега</button></div>`;
+const H=S.fasts.slice(-7).reverse();if(H.length)h+=`<div class="card"><h2>Последни постове</h2>${H.map(x=>`<div class="item"><span>${fmtD(dk(new Date(x.s)))}</span><span>${hms(x.e-x.s).slice(0,5)} ч ${x.e-x.s>=x.g*36e5?'✅':'· цел '+x.g+' ч'}</span></div>`).join('')}</div>`;
+h+='<p class="mut">През прозореца за хранене отбелязвай храните си. По време на поста: вода, чай и кафе без захар.</p>';return h}
+function stopF(){S.fasts.push({s:S.fast.s,e:Date.now(),g:S.fast.g});S.fast=null;save();render()}
+setInterval(()=>{if(tab==='fast'&&S.fast&&!$('#sheet').classList.contains('on'))render()},1000);
+
+function chart(){const W=[...S.weights].sort((a,b)=>a.d<b.d?-1:1);if(W.length<2)return'<p class="mut">Добави поне 2 измервания, за да видиш графика.</p>';const v=W.map(x=>x.w).concat(S.p.gw),mn=Math.min(...v)-1,mx=Math.max(...v)+1,w=320,h=150,X=i=>10+i*(w-20)/(W.length-1),Y=x=>h-12-(x-mn)/(mx-mn)*(h-24);
+return`<svg viewBox="0 0 ${w} ${h}" width="100%"><line x1="10" x2="${w-10}" y1="${Y(S.p.gw)}" y2="${Y(S.p.gw)}" stroke="var(--ok)" stroke-dasharray="4 4"/><polyline fill="none" stroke="var(--pri)" stroke-width="3" stroke-linejoin="round" points="${W.map((x,i)=>X(i)+','+Y(x.w)).join(' ')}"/>${W.map((x,i)=>`<circle cx="${X(i)}" cy="${Y(x.w)}" r="4" fill="var(--pri)"/>`).join('')}</svg><p class="mut" style="margin:0">Зелената линия е целта ти (${S.p.gw} кг)</p>`}
+function weightV(){const W=[...S.weights].sort((a,b)=>a.d<b.d?-1:1),s=W.length?W[0].w:S.p.w,n=W.length?W[W.length-1].w:S.p.w,tot=s-S.p.gw,pc=tot>0?Math.max(0,Math.min(100,(s-n)/tot*100)):0;
+return`<h1>Тегло</h1><div class="card"><div class="row"><input id="wi" type="number" inputmode="decimal" step="0.1" placeholder="кг" value="${n}"><button class="btn" style="margin:0;width:auto" onclick="addW()">Запиши</button></div></div>
+<div class="card"><div class="g2"><div><div class="mut">Свалени</div><b style="font-size:24px">${r1(Math.max(0,s-n))} кг</b></div><div><div class="mut">До целта</div><b style="font-size:24px">${r1(Math.max(0,n-S.p.gw))} кг</b></div></div><div class="bar" style="margin-top:12px"><i style="width:${pc}%;background:var(--ok)"></i></div>${chart()}</div>
+${W.length?`<div class="card"><h2>История</h2>${W.slice(-8).reverse().map(x=>`<div class="item"><span>${fmtD(x.d)}</span><b>${x.w} кг</b></div>`).join('')}</div>`:''}`}
+function addW(){const w=parseFloat($('#wi').value);if(!(w>20&&w<400))return toast('Въведи валидно тегло');const d=dk();S.weights=S.weights.filter(x=>x.d!==d);S.weights.push({d,w});S.p.w=w;save();toast('Записано ✓');render()}
+
+function meV(){const p=S.p,g=goals(),o=(v,l)=>`<option value="${v}" ${String(p.act)===String(v)||String(p.def)===String(v)||p.mode===v||p.sex===v?'selected':''}>${l}</option>`;
+return`<h1>${S.setup?'Профил':'Здравей! Настрой профила си'}</h1><p class="mut">Нужен е само веднъж. Данните остават в телефона ти.</p><div class="card"><div class="g2"><div><label>Пол</label><select id="ps">${o('f','Жена')}${o('m','Мъж')}</select></div><div><label>Възраст</label><input id="pa" type="number" value="${p.age}"></div><div><label>Ръст (см)</label><input id="ph" type="number" value="${p.h}"></div><div><label>Тегло (кг)</label><input id="pw" type="number" step="0.1" value="${p.w}"></div></div><label>Целево тегло (кг)</label><input id="pg" type="number" step="0.1" value="${p.gw}">
+<label>Активност</label><select id="pc">${o(1.2,'Седяща работа')}${o(1.375,'Лека (1–3 тренировки/седм.)')}${o(1.55,'Умерена (3–5)')}${o(1.725,'Висока (6–7)')}</select>
+<label>Темпо на отслабване</label><select id="pd">${o(.1,'Леко (−10%)')}${o(.15,'Умерено (−15%)')}${o(.2,'По-бързо (−20%)')}</select>
+<label>Режим на хранене</label><select id="pm">${o('keto','Кето (≈5% въглехидрати)')}${o('low','Ниско въглехидратно (≈15%)')}</select><button class="btn" onclick="saveP()">Запази</button></div>
+<div class="card"><h2>Твоите цели</h2><div class="item"><span>Калории</span><b>${g.k} ккал</b></div><div class="item"><span>Нетни въглехидрати</span><b>≤ ${g.c} г</b></div><div class="item"><span>Белтъчини</span><b>${g.p} г</b></div><div class="item"><span>Мазнини</span><b>${g.f} г</b></div><p class="mut">Очаквано отслабване ≈ ${r1(g.wk)} кг/седмица. Калориите не падат под ${p.sex==='m'?1500:1200}. При здравословни проблеми, бременност или кърмене първо се консултирай с лекар – особено преди кето или гладуване.</p></div>
+<button class="btn sec" onclick="exp()">Свали резервно копие</button><label class="btn sec" style="display:block;text-align:center">Зареди копие<input type="file" accept=".json" hidden onchange="imp(this)"></label>`}
+function saveP(){const v=i=>parseFloat($(i).value);const p={sex:$('#ps').value,age:v('#pa'),h:v('#ph'),w:v('#pw'),gw:v('#pg'),act:v('#pc'),def:v('#pd'),mode:$('#pm').value};if([p.age,p.h,p.w,p.gw].some(x=>!(x>0)))return toast('Попълни всички полета');S.p=p;S.setup=1;save();toast('Запазено ✓');tab='today';render()}
+function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='ketodnes-backup.json';a.click()}
+function imp(i){const f=i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{S=Object.assign({},def,JSON.parse(r.result));save();toast('Заредено ✓');render()}catch(e){toast('Невалиден файл')}};r.readAsText(f)}
+
+const TABS=[['today','🏠','Днес'],['food','🥑','Храна'],['fast','⏱️','Пост'],['weight','⚖️','Тегло'],['me','👤','Аз']];
+const go=t=>{tab=t;window.scrollTo(0,0);render()};
+function render(){$('#nav').innerHTML=TABS.map(t=>`<button class="${tab===t[0]?'on':''}" onclick="go('${t[0]}')"><b>${t[1]}</b>${t[2]}</button>`).join('');$('#app').innerHTML={today,food:foodV,fast:fastV,weight:weightV,me:meV}[tab]()}
+render();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
